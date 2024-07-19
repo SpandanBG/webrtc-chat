@@ -99,16 +99,18 @@ export function useRTC(ssInfo: SSInfo): RTCInfo {
       dataChannelOptions,
     )
 
-    dataChannel.current.onmessage = ({ data }) => {
-      setChannelMsg(data)
-    }
-
     dataChannel.current.onopen = () => {
       setRtcReady(true)
     }
 
     peerConn.current.onicecandidate = ({ candidate }) => {
       if (candidate) setIceCandidate(candidate)
+    }
+
+    peerConn.current.ondatachannel = (event) => {
+      const dataChannel = event.channel;
+
+      dataChannel.onmessage = ({ data }) => setChannelMsg(data)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [peerConn.current])
@@ -143,7 +145,7 @@ export function useRTC(ssInfo: SSInfo): RTCInfo {
   }, [peerConn.current])
 
   const handleIncomingIceCandidate = useCallback((iceCandidate: RTCIceCandidate) => {
-    peerConn.current.addIceCandidate(new RTCIceCandidate(iceCandidate))
+    peerConn.current.addIceCandidate(iceCandidate)
     setIceCandidate(iceCandidate);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [peerConn.current])
