@@ -32,8 +32,8 @@ const peerConfig: RTCConfiguration = {
     { urls: "stun:stun.xten.com" },
     {
       urls: "turn:localhost:3478",
-      username: 'admin',
-      credential: 'pass',
+      username: 'asdf',
+      credential: 'asdf',
     },
   ]
 }
