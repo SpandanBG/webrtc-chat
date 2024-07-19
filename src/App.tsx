@@ -61,7 +61,7 @@ function App() {
       default:
         return <></>
     }
-  }, [uiState, ssInfo.msg])
+  }, [uiState, ssInfo.msg, ssInfo.peers.length])
 
   return (
     <>

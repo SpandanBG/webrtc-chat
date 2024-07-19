@@ -10,7 +10,7 @@ export interface ChatProps {
 
 export function Chat({ peerUUID, ssInfo }: ChatProps) {
   const inputRef = useRef<HTMLInputElement | null>(null)
-  const { channelMsg, createOffer, sendMsg } = useRTC(ssInfo);
+  const { channelMsg, createOffer, sendMsg, rtcReady } = useRTC(ssInfo);
 
   const joinPeer = useCallback(() => {
     createOffer(peerUUID)
@@ -38,7 +38,7 @@ export function Chat({ peerUUID, ssInfo }: ChatProps) {
       <br />
       <input ref={inputRef} type="text" placeholder="<msg>" />
       <button type="button" onClick={sendMsgViaSS}>Send via SS</button>
-      <button type="button" onClick={sendMsgViaRTC}>Send via RTC</button>
+      <button type="button" onClick={sendMsgViaRTC} disabled={!rtcReady}>Send via RTC</button>
       <br />
     </>
   )
