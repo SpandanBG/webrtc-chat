@@ -18,7 +18,7 @@ export function Chat({ peerUUID, ssInfo }: ChatProps) {
   }, [peerUUID])
 
   const sendMsgViaSS = useCallback(() => {
-    if (inputRef.current) ssInfo.send(inputRef.current.value)
+    if (inputRef.current) ssInfo.send(inputRef.current.value, peerUUID)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inputRef.current])
 

@@ -5,7 +5,8 @@ const ws_addr = "ws://localhost:8080";
 export interface SSInfo {
   uuid: string
   msg: string
-  send: (msg: string) => void
+  publish: (msg: string) => void;
+  send: (msg: string, uuid: string) => void
   add: (uuid: string) => void
   join: (uuid: string) => void
 }
@@ -15,9 +16,13 @@ export function useSignlingServer(): SSInfo {
   const uuid = useRef<string>("")
   const [msg, setMsg] = useState<string>("")
 
-  const send = useCallback((msg: string) => {
-    ws_conn.current?.send(`write ${msg}`)
+  const publish = useCallback((msg: string) => {
+    ws_conn.current?.send(`publish ${msg}`)
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ws_conn.current])
+
+  const send = useCallback((msg: string, uuid: string) => {
+    ws_conn.current?.send(`write ${uuid} ${msg}`)
   }, [ws_conn.current])
 
   const add = useCallback((uuid: string) => {
@@ -42,5 +47,5 @@ export function useSignlingServer(): SSInfo {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  return { uuid: uuid.current, msg: msg, send, add, join }
+  return { uuid: uuid.current, msg: msg, publish, send, add, join }
 }

@@ -59,7 +59,11 @@ export function useRTC(ssInfo: SSInfo): RTCInfo {
     }
 
     peerConn.current.onicecandidate = ({ candidate }) => {
-      if (candidate) ssInfo.send(iceCandidatePacket(candidate, ssInfo.uuid))
+      if (candidate) ssInfo.publish(iceCandidatePacket(candidate, ssInfo.uuid))
+    }
+
+    peerConn.current.onconnectionstatechange = (event) => {
+      console.log("state > ", event)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [peerConn.current])
@@ -68,7 +72,7 @@ export function useRTC(ssInfo: SSInfo): RTCInfo {
     peerConn.current.createOffer()
       .then((offer) => {
         const data = offerPacket(offer, ssInfo.uuid)
-        ssInfo.send(data);
+        ssInfo.publish(data);
 
         peerConn.current.setLocalDescription(offer)
       })
@@ -80,7 +84,7 @@ export function useRTC(ssInfo: SSInfo): RTCInfo {
     peerConn.current.createAnswer()
       .then((answer) => {
         const data = answerPacket(answer, ssInfo.uuid)
-        ssInfo.send(data)
+        ssInfo.publish(data)
 
         peerConn.current.setLocalDescription(answer)
       })
