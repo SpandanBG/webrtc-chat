@@ -13,13 +13,16 @@ export function Welcome({ setChatUI, ssInfo }: WelcomeProps) {
 
   const joinGrp = useCallback(() => {
     if (!inputRef.current) return;
+
     add(inputRef.current.value)
     join(inputRef.current.value)
     setChatUI(inputRef.current.value);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [add, join])
 
   const hostGrp = useCallback(() => [
     setChatUI("")
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   ], [])
 
   return (

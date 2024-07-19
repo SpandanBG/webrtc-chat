@@ -18,14 +18,17 @@ export function useSignlingServer(): SSInfo {
 
   const send = useCallback((msg: string) => {
     ws_conn.current?.send(`write ${msg}`)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ws_conn.current])
 
   const add = useCallback((uuid: string) => {
     ws_conn.current?.send(`add ${uuid}`)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ws_conn.current])
 
   const join = useCallback((uuid: string) => {
     ws_conn.current?.send(`join ${uuid}`)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ws_conn.current])
 
   useEffect(() => {
@@ -39,6 +42,7 @@ export function useSignlingServer(): SSInfo {
       setMsg(data)
     });
 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ws_conn.current])
 
   return { conn: ws_conn.current, uuid: uuid.current, msg, send, add, join }

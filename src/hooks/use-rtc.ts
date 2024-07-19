@@ -29,7 +29,8 @@ const peerConfig: RTCConfiguration = {
     { urls: "stun:stun.voipbuster.com" },
     { urls: "stun:stun.voipstunt.com" },
     { urls: "stun:stun.voxgratia.org" },
-    { urls: "stun:stun.xten.com" }
+    { urls: "stun:stun.xten.com" },
+
   ]
 }
 
@@ -54,6 +55,7 @@ export function useRTC(ssInfo: SSInfo): RTCInfo {
     peerConn.current.onicecandidate = ({ candidate }) => {
       ssInfo.send(JSON.stringify(candidate))
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [peerConn.current])
 
   const createOffer = useCallback(() => {
@@ -64,6 +66,7 @@ export function useRTC(ssInfo: SSInfo): RTCInfo {
 
         peerConn.current.setLocalDescription(offer)
       })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [peerConn.current])
 
   const handleIncomingOffer = useCallback((offer: RTCSessionDescriptionInit) => {
@@ -76,14 +79,17 @@ export function useRTC(ssInfo: SSInfo): RTCInfo {
         peerConn.current.setLocalDescription(answer)
       })
 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [peerConn.current])
 
   const handleIncomingAnswer = useCallback((answer: RTCSessionDescriptionInit) => {
     peerConn.current.setRemoteDescription(new RTCSessionDescription(answer))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [peerConn.current])
 
   const handleIncomingIceCandidate = useCallback((iceCandidate: RTCIceCandidateInit) => {
     peerConn.current.addIceCandidate(new RTCIceCandidate(iceCandidate))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [peerConn.current])
 
   // Handle messages from signaling server
@@ -104,6 +110,7 @@ export function useRTC(ssInfo: SSInfo): RTCInfo {
         break;
     }
 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ssInfo.msg])
 
   return {

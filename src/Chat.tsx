@@ -13,6 +13,7 @@ export function Chat({ peerUUID, ssInfo }: ChatProps) {
 
   const joinPeer = useCallback(() => {
     createOffer(peerUUID)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [peerUUID])
 
   return (
