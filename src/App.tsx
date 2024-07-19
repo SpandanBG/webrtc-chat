@@ -61,7 +61,7 @@ function App() {
       default:
         return <></>
     }
-  }, [uiState])
+  }, [uiState, ssInfo.msg])
 
   return (
     <>
