@@ -40,7 +40,7 @@ interface RTCInfo {
   createOffer: (uuid: string) => void
 }
 
-export function useRTC(ssInfo: SSInfo, msg: string): RTCInfo {
+export function useRTC(ssInfo: SSInfo): RTCInfo {
   const peerConn = useRef<RTCPeerConnection>(new RTCPeerConnection(peerConfig))
   const dataChannel = useRef<RTCDataChannel | undefined>()
 
@@ -93,7 +93,7 @@ export function useRTC(ssInfo: SSInfo, msg: string): RTCInfo {
 
   // Handle messages from signaling server
   useEffect(() => {
-    const [packet, isValid] = unpackPacket(msg)
+    const [packet, isValid] = unpackPacket(ssInfo.msg)
 
     if (!isValid) return;
 
@@ -110,7 +110,7 @@ export function useRTC(ssInfo: SSInfo, msg: string): RTCInfo {
     }
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [msg])
+  }, [ssInfo.msg])
 
   return {
     createOffer,

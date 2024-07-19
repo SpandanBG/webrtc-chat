@@ -42,9 +42,7 @@ function UUID({ uuid }: UUIDProps) {
 }
 
 function App() {
-  const [msg, setMsg] = useState<string>("")
-
-  const ssInfo = useSignlingServer(setMsg);
+  const ssInfo = useSignlingServer();
   const [uiState, setUIState] = useState<UIState>(UIState.WELCOME)
   const [peerUUID, setPeerUUID] = useState<string>("")
 
@@ -59,7 +57,7 @@ function App() {
       case UIState.WELCOME:
         return <Welcome setChatUI={setChatUI} ssInfo={ssInfo} />
       case UIState.CHAT:
-        return <Chat setWelcomeUI={setWelcomeUI} ssInfo={ssInfo} peerUUID={peerUUID} msg={msg} />
+        return <Chat setWelcomeUI={setWelcomeUI} ssInfo={ssInfo} peerUUID={peerUUID} />
       default:
         return <></>
     }

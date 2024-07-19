@@ -1,20 +1,19 @@
-import { useRef, useEffect, useCallback } from 'react'
-import type { Dispatch, SetStateAction } from 'react'
+import { useRef, useState, useEffect, useCallback } from 'react'
 
 const ws_addr = "ws://localhost:8080";
 
 export interface SSInfo {
   uuid: string
+  msg: string
   send: (msg: string) => void
   add: (uuid: string) => void
   join: (uuid: string) => void
 }
 
-type SetMsgT = Dispatch<SetStateAction<string>>
-
-export function useSignlingServer(setMsg: SetMsgT): SSInfo {
-  const ws_conn = useRef<WebSocket | undefined>()
+export function useSignlingServer(): SSInfo {
+  const ws_conn = useRef<WebSocket>(new WebSocket(ws_addr))
   const uuid = useRef<string>("")
+  const [msg, setMsg] = useState<string>("")
 
   const send = useCallback((msg: string) => {
     ws_conn.current?.send(`write ${msg}`)
@@ -32,10 +31,9 @@ export function useSignlingServer(setMsg: SetMsgT): SSInfo {
   }, [ws_conn.current])
 
   useEffect(() => {
-    const conn = new WebSocket(ws_addr)
-    ws_conn.current = conn;
+    if (!ws_conn.current) return
 
-    conn.onmessage = (({ data }) => {
+    ws_conn.current.onmessage = (({ data }) => {
       if (!uuid.current) {
         uuid.current = data
       }
@@ -44,5 +42,5 @@ export function useSignlingServer(setMsg: SetMsgT): SSInfo {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  return { uuid: uuid.current, send, add, join }
+  return { uuid: uuid.current, msg: msg, send, add, join }
 }
