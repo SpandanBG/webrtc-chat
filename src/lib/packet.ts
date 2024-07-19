@@ -7,30 +7,34 @@ export enum PacketType {
 
 interface Packet {
   type: PacketType;
-  data: RTCSessionDescriptionInit | RTCIceCandidateInit | string;
+  sender_uuid: string;
+  data: RTCSessionDescriptionInit | RTCIceCandidate | string;
 }
 
-export function offerPacket(offer: RTCSessionDescriptionInit): string {
+export function offerPacket(offer: RTCSessionDescriptionInit, uuid: string): string {
   const pkt: Packet = {
     type: PacketType.OFFER,
+    sender_uuid: uuid,
     data: offer
   }
 
   return JSON.stringify(pkt)
 }
 
-export function answerPacket(answer: RTCSessionDescriptionInit): string {
+export function answerPacket(answer: RTCSessionDescriptionInit, uuid: string): string {
   const pkt: Packet = {
     type: PacketType.ANSWER,
+    sender_uuid: uuid,
     data: answer
   }
 
   return JSON.stringify(pkt)
 }
 
-export function iceCandidatePacket(candidate: RTCIceCandidateInit): string {
+export function iceCandidatePacket(candidate: RTCIceCandidate, uuid: string): string {
   const pkt: Packet = {
     type: PacketType.ICE_CANDIDATE,
+    sender_uuid: uuid,
     data: candidate
   }
 
@@ -41,6 +45,6 @@ export function unpackPacket(packetStr: string): [Packet, boolean] {
   try {
     return [JSON.parse(packetStr) as unknown as Packet, true];
   } catch {
-    return [{ type: PacketType.NONE, data: packetStr }, false];
+    return [{ type: PacketType.NONE, sender_uuid: "", data: packetStr }, false];
   }
 }

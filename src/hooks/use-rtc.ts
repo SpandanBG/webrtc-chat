@@ -30,7 +30,6 @@ const peerConfig: RTCConfiguration = {
     { urls: "stun:stun.voipstunt.com" },
     { urls: "stun:stun.voxgratia.org" },
     { urls: "stun:stun.xten.com" },
-
   ]
 }
 
@@ -41,7 +40,7 @@ interface RTCInfo {
   createOffer: (uuid: string) => void
 }
 
-export function useRTC(ssInfo: SSInfo): RTCInfo {
+export function useRTC(ssInfo: SSInfo, msg: string): RTCInfo {
   const peerConn = useRef<RTCPeerConnection>(new RTCPeerConnection(peerConfig))
   const dataChannel = useRef<RTCDataChannel | undefined>()
 
@@ -53,7 +52,7 @@ export function useRTC(ssInfo: SSInfo): RTCInfo {
     )
 
     peerConn.current.onicecandidate = ({ candidate }) => {
-      ssInfo.send(JSON.stringify(candidate))
+      if (candidate) ssInfo.send(iceCandidatePacket(candidate, ssInfo.uuid))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [peerConn.current])
@@ -61,7 +60,7 @@ export function useRTC(ssInfo: SSInfo): RTCInfo {
   const createOffer = useCallback(() => {
     peerConn.current.createOffer()
       .then((offer) => {
-        const data = offerPacket(offer)
+        const data = offerPacket(offer, ssInfo.uuid)
         ssInfo.send(data);
 
         peerConn.current.setLocalDescription(offer)
@@ -73,7 +72,7 @@ export function useRTC(ssInfo: SSInfo): RTCInfo {
     peerConn.current.setRemoteDescription(new RTCSessionDescription(offer))
     peerConn.current.createAnswer()
       .then((answer) => {
-        const data = answerPacket(answer)
+        const data = answerPacket(answer, ssInfo.uuid)
         ssInfo.send(data)
 
         peerConn.current.setLocalDescription(answer)
@@ -87,14 +86,14 @@ export function useRTC(ssInfo: SSInfo): RTCInfo {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [peerConn.current])
 
-  const handleIncomingIceCandidate = useCallback((iceCandidate: RTCIceCandidateInit) => {
+  const handleIncomingIceCandidate = useCallback((iceCandidate: RTCIceCandidate) => {
     peerConn.current.addIceCandidate(new RTCIceCandidate(iceCandidate))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [peerConn.current])
 
   // Handle messages from signaling server
   useEffect(() => {
-    const [packet, isValid] = unpackPacket(ssInfo.msg)
+    const [packet, isValid] = unpackPacket(msg)
 
     if (!isValid) return;
 
@@ -106,12 +105,12 @@ export function useRTC(ssInfo: SSInfo): RTCInfo {
         handleIncomingAnswer(packet.data as unknown as RTCSessionDescriptionInit)
         break;
       case PacketType.ICE_CANDIDATE:
-        handleIncomingIceCandidate(packet.data as unknown as RTCIceCandidateInit)
+        handleIncomingIceCandidate(packet.data as unknown as RTCIceCandidate)
         break;
     }
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ssInfo.msg])
+  }, [msg])
 
   return {
     createOffer,
