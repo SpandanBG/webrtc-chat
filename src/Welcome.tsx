@@ -3,7 +3,7 @@ import type { SSInfo } from './hooks/use-signaling-server'
 
 export interface WelcomeProps {
   ssInfo: SSInfo;
-  setChatUI: () => void;
+  setChatUI: (uuid: string) => void;
 }
 
 export function Welcome({ setChatUI, ssInfo }: WelcomeProps) {
@@ -15,12 +15,16 @@ export function Welcome({ setChatUI, ssInfo }: WelcomeProps) {
     if (!inputRef.current) return;
     add(inputRef.current.value)
     join(inputRef.current.value)
-    setChatUI();
+    setChatUI(inputRef.current.value);
   }, [add, join])
+
+  const hostGrp = useCallback(() => [
+    setChatUI("")
+  ], [])
 
   return (
     <>
-      <button type="button" onClick={setChatUI}>Host</button>
+      <button type="button" onClick={hostGrp}>Host</button>
       <br />
       <input ref={inputRef} type="text" placeholder="uuid" />
       <button type="button" onClick={joinGrp}>Join</button>

@@ -34,6 +34,7 @@ export function useSignlingServer(): SSInfo {
     ws_conn.current.addEventListener("message", ({ data }) => {
       if (!uuid.current) {
         uuid.current = data
+        ws_conn.current.send(`banner Welcome to ${uuid}`)
       }
       setMsg(data)
     });

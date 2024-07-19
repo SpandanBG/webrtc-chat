@@ -1,13 +1,24 @@
+import { useCallback } from 'react';
 import { useRTC } from './hooks/use-rtc';
 import type { SSInfo } from './hooks/use-signaling-server'
 
 export interface ChatProps {
   ssInfo: SSInfo;
+  peerUUID: string;
   setWelcomeUI: () => void;
 }
 
-export function Chat({ setWelcomeUI, ssInfo }: ChatProps) {
-  useRTC(ssInfo)
+export function Chat({ peerUUID, ssInfo }: ChatProps) {
+  const { createOffer } = useRTC(ssInfo);
 
-  return <>chat</>
+  const joinPeer = useCallback(() => {
+    createOffer(peerUUID)
+  }, [peerUUID])
+
+  return (
+    <>
+      msg &gt; {ssInfo.msg}<br />
+      <button type="button" onClick={joinPeer}>CALL: {peerUUID}</button>
+    </>
+  )
 }

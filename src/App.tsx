@@ -34,27 +34,30 @@ function UUID({ uuid }: UUIDProps) {
   }, [])
 
   return (
-    <>
+    <div style={{ marginBottom: "25px" }}>
       <span onClick={copyToClipboard}>{uuid}</span>
       {showCopied ? <span>&nbsp;Copied!!</span> : undefined}
-      <br />
-    </>
+    </div>
   )
 }
 
 function App() {
   const ssInfo = useSignlingServer();
   const [uiState, setUIState] = useState<UIState>(UIState.WELCOME)
+  const [peerUUID, setPeerUUID] = useState<string>("")
 
   const setWelcomeUI = useCallback(() => setUIState(UIState.WELCOME), [])
-  const setChatUI = useCallback(() => setUIState(UIState.CHAT), [])
+  const setChatUI = useCallback((uuid: string) => {
+    setPeerUUID(uuid)
+    setUIState(UIState.CHAT)
+  }, [])
 
   const ui = useMemo(() => {
     switch (uiState) {
       case UIState.WELCOME:
         return <Welcome setChatUI={setChatUI} ssInfo={ssInfo} />
       case UIState.CHAT:
-        return <Chat setWelcomeUI={setWelcomeUI} ssInfo={ssInfo} />
+        return <Chat setWelcomeUI={setWelcomeUI} ssInfo={ssInfo} peerUUID={peerUUID} />
       default:
         return <></>
     }
