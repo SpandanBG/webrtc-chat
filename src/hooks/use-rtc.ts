@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { SSInfo } from './use-signaling-server';
 import {
   offerPacket,
@@ -37,12 +37,15 @@ const dataChannelName = "channel-123"
 const dataChannelOptions: RTCDataChannelInit = {}
 
 interface RTCInfo {
-  createOffer: (uuid: string) => void
+  channelMsg: string;
+  createOffer: (uuid: string) => void;
+  sendMsg: (msg: string) => void;
 }
 
 export function useRTC(ssInfo: SSInfo): RTCInfo {
   const peerConn = useRef<RTCPeerConnection>(new RTCPeerConnection(peerConfig))
   const dataChannel = useRef<RTCDataChannel | undefined>()
+  const [channelMsg, setChannelMsg] = useState<string>("")
 
   // Prepare data channel and send ice candidate
   useEffect(() => {
@@ -50,6 +53,10 @@ export function useRTC(ssInfo: SSInfo): RTCInfo {
       dataChannelName,
       dataChannelOptions,
     )
+
+    dataChannel.current.onmessage = ({ data }) => {
+      setChannelMsg(data)
+    }
 
     peerConn.current.onicecandidate = ({ candidate }) => {
       if (candidate) ssInfo.send(iceCandidatePacket(candidate, ssInfo.uuid))
@@ -112,7 +119,13 @@ export function useRTC(ssInfo: SSInfo): RTCInfo {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ssInfo.msg])
 
+  const sendMsg = useCallback((msg: string) => {
+    if (dataChannel.current) dataChannel.current.send(msg)
+  }, [dataChannel.current])
+
   return {
+    channelMsg,
     createOffer,
+    sendMsg,
   }
 }
