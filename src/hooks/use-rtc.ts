@@ -89,6 +89,8 @@ interface RTCInfo {
   rtcReady: boolean;
   sendVideoFeed: () => void;
   stopVideoFeed: () => void;
+  sendAudioFeed: () => void;
+  stopAudioFeed: () => void;
 }
 
 export function useRTC(ssInfo: SSInfo): RTCInfo {
@@ -101,10 +103,10 @@ export function useRTC(ssInfo: SSInfo): RTCInfo {
   >();
   const { peerContexts, sendIceToFreshPeer } = useManagedPeers(ssInfo);
 
-  // useEffect(() => {
-  //   if (!iceCandidate || !peerContexts) return;
-  //   sendIceToFreshPeer(iceCandidate);
-  // }, [peerContexts, iceCandidate]);
+  useEffect(() => {
+    if (!iceCandidate || !peerContexts) return;
+    sendIceToFreshPeer(iceCandidate);
+  }, [peerContexts, iceCandidate]);
 
   // Prepare data channel and send ice candidate
   useEffect(() => {
@@ -115,6 +117,7 @@ export function useRTC(ssInfo: SSInfo): RTCInfo {
     );
 
     dataChannel.current.onopen = () => {
+      console.log("reached onopen");
       setRtcReady(true);
     };
 
@@ -141,13 +144,23 @@ export function useRTC(ssInfo: SSInfo): RTCInfo {
     };
 
     peerConn.current.ontrack = (event) => {
-      const remoteVideo = document.getElementById(
-        "remoteVideo"
-      ) as HTMLVideoElement;
-      console.log("remoteVideo", event);
-
-      remoteVideo.srcObject = event.streams[0];
-      console.log("show vide", remoteVideo.srcObject);
+      if (event.track.kind === "video") {
+        const remoteVideo = document.getElementById(
+          "remoteVideo"
+        ) as HTMLVideoElement;
+        if (remoteVideo) {
+          remoteVideo.srcObject = event.streams[0];
+          remoteVideo.play();
+        }
+      } else if (event.track.kind === "audio") {
+        const remoteAudio = document.getElementById(
+          "remoteAudio"
+        ) as HTMLAudioElement;
+        if (remoteAudio) {
+          remoteAudio.srcObject = event.streams[0];
+          remoteAudio.play();
+        }
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [peerConn.current]);
@@ -188,7 +201,7 @@ export function useRTC(ssInfo: SSInfo): RTCInfo {
   const handleIncomingIceCandidate = useCallback(
     (iceCandidate: RTCIceCandidate) => {
       peerConn.current.addIceCandidate(iceCandidate);
-      // setIceCandidate(iceCandidate);
+      setIceCandidate(iceCandidate);
       // eslint-disable-next-line react-hooks/exhaustive-deps
     },
     [peerConn.current]
@@ -221,7 +234,9 @@ export function useRTC(ssInfo: SSInfo): RTCInfo {
 
   const sendMsg = useCallback(
     (msg: string) => {
-      if (dataChannel.current && dataChannel.current.readyState) {
+      console.log("reached mssg 1");
+      if (dataChannel.current && dataChannel.current.readyState == "open") {
+        console.log("reached mssg 2");
         dataChannel.current.send(msg);
       }
     },
@@ -236,7 +251,6 @@ export function useRTC(ssInfo: SSInfo): RTCInfo {
           video: {
             facingMode: "user", // or "environment" for rear camera
           },
-          audio: true,
         })
         .then((stream) => {
           const video = document.getElementById(
@@ -283,6 +297,59 @@ export function useRTC(ssInfo: SSInfo): RTCInfo {
     }
   }, []);
 
+  const sendAudioFeed = useCallback(() => {
+    if (hasUserMedia()) {
+      navigator.mediaDevices
+        .getUserMedia({
+          audio: true,
+        })
+        .then((stream) => {
+          const audio = document.getElementById(
+            "audioContainer"
+          ) as HTMLAudioElement;
+          audio.srcObject = stream;
+          audio.play();
+          stream.getTracks().forEach((track) => {
+            console.log("show audio tracks", track);
+            try {
+              peerConn.current.addTrack(track, stream);
+            } catch {
+              console.log("error adding audio track");
+            }
+          });
+        })
+        .catch((error) => {
+          console.error("Error accessing audio media devices.", error);
+        });
+    } else {
+      console.error("User media not available for audio");
+    }
+  }, [peerConn.current]);
+
+  const stopAudioFeed = useCallback(() => {
+    // Assuming there's an audio element to hold the stream
+    const audio = document.getElementById("audioContainer") as HTMLAudioElement;
+
+    if (audio && audio.srcObject) {
+      const stream = audio.srcObject as MediaStream;
+      const tracks = stream.getTracks();
+      console.log("audio track stop");
+      tracks.forEach((track) => {
+        console.log("audio stop track");
+        track.stop();
+      });
+
+      const senders = peerConn.current.getSenders();
+      senders.forEach((sender) => {
+        if (sender.track?.kind === "audio") {
+          peerConn.current.removeTrack(sender);
+        }
+      });
+
+      audio.srcObject = null;
+    }
+  }, []);
+
   return {
     channelMsg,
     createOffer,
@@ -290,5 +357,7 @@ export function useRTC(ssInfo: SSInfo): RTCInfo {
     rtcReady,
     sendVideoFeed,
     stopVideoFeed,
+    sendAudioFeed,
+    stopAudioFeed,
   };
 }

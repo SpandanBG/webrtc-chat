@@ -17,6 +17,8 @@ export function Chat({ peerUUID, ssInfo }: ChatProps) {
     rtcReady,
     sendVideoFeed,
     stopVideoFeed,
+    sendAudioFeed,
+    stopAudioFeed,
   } = useRTC(ssInfo);
 
   const joinPeer = useCallback(() => {
@@ -37,17 +39,6 @@ export function Chat({ peerUUID, ssInfo }: ChatProps) {
     if (inputRef.current) sendMsg(inputRef.current.value);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inputRef.current]);
-
-  // const stopVideoFeed = useCallback(() => {
-  //   const video = document.getElementById("localVideo") as HTMLVideoElement;
-  //   if (video && video.srcObject) {
-  //     const stream = video.srcObject as MediaStream;
-  //     const tracks = stream.getTracks();
-
-  //     tracks.forEach((track) => track.stop());
-  //     video.srcObject = null;
-  //   }
-  // }, []);
 
   return (
     <>
@@ -76,6 +67,12 @@ export function Chat({ peerUUID, ssInfo }: ChatProps) {
       <button type="button" onClick={stopVideoFeed}>
         Stop Video
       </button>
+      <button type="button" onClick={sendAudioFeed}>
+        Join Audio
+      </button>
+      <button type="button" onClick={stopAudioFeed}>
+        Stop Audio
+      </button>
       <video id="remoteVideo" autoPlay>
         {" "}
         Remote Video
@@ -84,6 +81,8 @@ export function Chat({ peerUUID, ssInfo }: ChatProps) {
         {" "}
         Local Video
       </video>
+      <audio id="audioContainer"></audio>
+      <audio id="remoteAudio"></audio>
       <br />
     </>
   );
