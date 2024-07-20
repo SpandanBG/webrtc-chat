@@ -1,11 +1,11 @@
-import { useEffect, useCallback, useMemo, useRef, useState } from 'react';
-import { useSignlingServer } from './hooks/use-signaling-server'
-import { Welcome } from './Welcome';
-import { Chat } from './Chat'
+import { useEffect, useCallback, useMemo, useRef, useState } from "react";
+import { useSignlingServer } from "./hooks/use-signaling-server";
+import { Welcome } from "./Welcome";
+import { Chat } from "./Chat";
 
 enum UIState {
   WELCOME,
-  CHAT
+  CHAT,
 }
 
 interface UUIDProps {
@@ -13,55 +13,64 @@ interface UUIDProps {
 }
 
 function UUID({ uuid }: UUIDProps) {
-  const [showCopied, setShowCopied] = useState<boolean>(false)
-  const timeoutRef = useRef<NodeJS.Timeout | undefined>()
+  const [showCopied, setShowCopied] = useState<boolean>(false);
+  const timeoutRef = useRef<NodeJS.Timeout | undefined>();
 
   const copyToClipboard = useCallback(() => {
-    navigator.clipboard.writeText(uuid)
-    setShowCopied(true)
+    navigator.clipboard.writeText(uuid);
+    setShowCopied(true);
 
     if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current)
+      clearTimeout(timeoutRef.current);
     }
 
-    timeoutRef.current = setTimeout(() => setShowCopied(false), 1500)
-  }, [uuid])
+    timeoutRef.current = setTimeout(() => setShowCopied(false), 1500);
+  }, [uuid]);
 
-  useEffect(() => () => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current)
-    }
-  }, [])
+  useEffect(
+    () => () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    },
+    []
+  );
 
   return (
     <div style={{ marginBottom: "25px" }}>
       <span onClick={copyToClipboard}>{uuid}</span>
       {showCopied ? <span>&nbsp;Copied!!</span> : undefined}
     </div>
-  )
+  );
 }
 
 function App() {
   const ssInfo = useSignlingServer();
-  const [uiState, setUIState] = useState<UIState>(UIState.WELCOME)
-  const [peerUUID, setPeerUUID] = useState<string>("")
+  const [uiState, setUIState] = useState<UIState>(UIState.WELCOME);
+  const [peerUUID, setPeerUUID] = useState<string>("");
 
-  const setWelcomeUI = useCallback(() => setUIState(UIState.WELCOME), [])
+  const setWelcomeUI = useCallback(() => setUIState(UIState.WELCOME), []);
   const setChatUI = useCallback((uuid: string) => {
-    setPeerUUID(uuid)
-    setUIState(UIState.CHAT)
-  }, [])
+    setPeerUUID(uuid);
+    setUIState(UIState.CHAT);
+  }, []);
 
   const ui = useMemo(() => {
     switch (uiState) {
       case UIState.WELCOME:
-        return <Welcome setChatUI={setChatUI} ssInfo={ssInfo} />
+        return <Welcome setChatUI={setChatUI} ssInfo={ssInfo} />;
       case UIState.CHAT:
-        return <Chat setWelcomeUI={setWelcomeUI} ssInfo={ssInfo} peerUUID={peerUUID} />
+        return (
+          <Chat
+            setWelcomeUI={setWelcomeUI}
+            ssInfo={ssInfo}
+            peerUUID={peerUUID}
+          />
+        );
       default:
-        return <></>
+        return <></>;
     }
-  }, [uiState, ssInfo.msg, ssInfo.peers.length])
+  }, [uiState, ssInfo.msg, ssInfo.peers.length]);
 
   return (
     <>
