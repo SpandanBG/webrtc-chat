@@ -1,12 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import type { SSInfo } from './use-signaling-server';
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { SSInfo } from "./use-signaling-server";
 import {
   offerPacket,
   answerPacket,
   iceCandidatePacket,
   unpackPacket,
   PacketType,
-} from '../lib/packet'
+} from "../lib/packet";
 
 const peerConfig: RTCConfiguration = {
   iceServers: [
@@ -32,14 +32,14 @@ const peerConfig: RTCConfiguration = {
     { urls: "stun:stun.xten.com" },
     {
       urls: "turn:localhost:3478",
-      username: 'asdf',
-      credential: 'asdf',
+      username: "asdf",
+      credential: "asdf",
     },
-  ]
-}
+  ],
+};
 
-const dataChannelName = "channel-123"
-const dataChannelOptions: RTCDataChannelInit = {}
+const dataChannelName = "channel-123";
+const dataChannelOptions: RTCDataChannelInit = {};
 
 interface PeerContext {
   sentIceCandidate: boolean;
@@ -51,25 +51,31 @@ interface PeersManager {
 }
 
 function useManagedPeers(ssInfo: SSInfo): PeersManager {
-  const [peerCtx, setPeerCtx] = useState<Record<string, PeerContext>>({})
+  const [peerCtx, setPeerCtx] = useState<Record<string, PeerContext>>({});
 
   // Add new peer to ctx if present
   useEffect(() => {
-    ssInfo.peers?.forEach(peer => {
+    ssInfo.peers?.forEach((peer) => {
       if (peer in peerCtx) return;
-      setPeerCtx(prevCtx => ({ ...prevCtx, [peer]: { sentIceCandidate: false } }))
-    })
-  }, [ssInfo.peers.length])
+      setPeerCtx((prevCtx) => ({
+        ...prevCtx,
+        [peer]: { sentIceCandidate: false },
+      }));
+    });
+  }, [ssInfo.peers.length]);
 
-  const sendIceToFreshPeer = useCallback((iceCandidate: RTCIceCandidate) => {
-    Object.keys(peerCtx).forEach(peerUUID => {
-      if (peerCtx[peerUUID].sentIceCandidate) return;
-      ssInfo.send(iceCandidatePacket(iceCandidate, ssInfo.uuid), peerUUID)
-      peerCtx[peerUUID].sentIceCandidate = true;
-    })
-  }, [peerCtx])
+  const sendIceToFreshPeer = useCallback(
+    (iceCandidate: RTCIceCandidate) => {
+      Object.keys(peerCtx).forEach((peerUUID) => {
+        if (peerCtx[peerUUID].sentIceCandidate) return;
+        ssInfo.send(iceCandidatePacket(iceCandidate, ssInfo.uuid), peerUUID);
+        peerCtx[peerUUID].sentIceCandidate = true;
+      });
+    },
+    [peerCtx]
+  );
 
-  return { peerContexts: peerCtx, sendIceToFreshPeer }
+  return { peerContexts: peerCtx, sendIceToFreshPeer };
 }
 
 interface RTCInfo {
@@ -80,108 +86,125 @@ interface RTCInfo {
 }
 
 export function useRTC(ssInfo: SSInfo): RTCInfo {
-  const peerConn = useRef<RTCPeerConnection>(new RTCPeerConnection(peerConfig))
-  const dataChannel = useRef<RTCDataChannel | undefined>()
-  const [channelMsg, setChannelMsg] = useState<string>("")
-  const [rtcReady, setRtcReady] = useState<boolean>(false)
-  const [iceCandidate, setIceCandidate] = useState<RTCIceCandidate | undefined>();
+  const peerConn = useRef<RTCPeerConnection>(new RTCPeerConnection(peerConfig));
+  const dataChannel = useRef<RTCDataChannel | undefined>();
+  const [channelMsg, setChannelMsg] = useState<string>("");
+  const [rtcReady, setRtcReady] = useState<boolean>(false);
+  const [iceCandidate, setIceCandidate] = useState<
+    RTCIceCandidate | undefined
+  >();
   const { peerContexts, sendIceToFreshPeer } = useManagedPeers(ssInfo);
 
   useEffect(() => {
     if (!iceCandidate || !peerContexts) return;
     sendIceToFreshPeer(iceCandidate);
-  }, [peerContexts, iceCandidate])
+  }, [peerContexts, iceCandidate]);
 
   // Prepare data channel and send ice candidate
   useEffect(() => {
     dataChannel.current = peerConn.current.createDataChannel(
       dataChannelName,
-      dataChannelOptions,
-    )
+      dataChannelOptions
+    );
 
     dataChannel.current.onopen = () => {
-      setRtcReady(true)
-    }
+      setRtcReady(true);
+    };
 
     peerConn.current.onicecandidate = ({ candidate }) => {
-      if (candidate) setIceCandidate(candidate)
-    }
+      if (candidate) setIceCandidate(candidate);
+    };
 
     peerConn.current.ondatachannel = (event) => {
       const dataChannel = event.channel;
 
-      dataChannel.onmessage = ({ data }) => setChannelMsg(data)
-    }
+      dataChannel.onmessage = ({ data }) => setChannelMsg(data);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [peerConn.current])
+  }, [peerConn.current]);
 
   const createOffer = useCallback(() => {
-    peerConn.current.createOffer()
-      .then((offer) => {
-        const data = offerPacket(offer, ssInfo.uuid)
-        ssInfo.publish(data);
+    peerConn.current.createOffer().then((offer) => {
+      const data = offerPacket(offer, ssInfo.uuid);
+      ssInfo.publish(data);
 
-        peerConn.current.setLocalDescription(offer)
-      })
+      peerConn.current.setLocalDescription(offer);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [peerConn.current])
+  }, [peerConn.current]);
 
-  const handleIncomingOffer = useCallback((offer: RTCSessionDescriptionInit, sender_uuid: string) => {
-    peerConn.current.setRemoteDescription(new RTCSessionDescription(offer))
-    peerConn.current.createAnswer()
-      .then((answer) => {
-        const data = answerPacket(answer, ssInfo.uuid)
-        ssInfo.send(data, sender_uuid)
+  const handleIncomingOffer = useCallback(
+    (offer: RTCSessionDescriptionInit, sender_uuid: string) => {
+      peerConn.current.setRemoteDescription(new RTCSessionDescription(offer));
+      peerConn.current.createAnswer().then((answer) => {
+        const data = answerPacket(answer, ssInfo.uuid);
+        ssInfo.send(data, sender_uuid);
 
-        peerConn.current.setLocalDescription(answer)
-      })
+        peerConn.current.setLocalDescription(answer);
+      });
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [peerConn.current])
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    },
+    [peerConn.current]
+  );
 
-  const handleIncomingAnswer = useCallback((answer: RTCSessionDescriptionInit) => {
-    peerConn.current.setRemoteDescription(new RTCSessionDescription(answer))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [peerConn.current])
+  const handleIncomingAnswer = useCallback(
+    (answer: RTCSessionDescriptionInit) => {
+      peerConn.current.setRemoteDescription(new RTCSessionDescription(answer));
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    },
+    [peerConn.current]
+  );
 
-  const handleIncomingIceCandidate = useCallback((iceCandidate: RTCIceCandidate) => {
-    peerConn.current.addIceCandidate(new RTCIceCandidate(iceCandidate))
-    setIceCandidate(iceCandidate);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [peerConn.current])
+  const handleIncomingIceCandidate = useCallback(
+    (iceCandidate: RTCIceCandidate) => {
+      peerConn.current.addIceCandidate(new RTCIceCandidate(iceCandidate));
+      setIceCandidate(iceCandidate);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    },
+    [peerConn.current]
+  );
 
   // Handle messages from signaling server
   useEffect(() => {
-    const [sender_uuid, b64_json_str] = ssInfo.msg.split(" ")
-    const [packet, isValid] = unpackPacket(b64_json_str)
+    const [sender_uuid, b64_json_str] = ssInfo.msg.split(" ");
+    const [packet, isValid] = unpackPacket(b64_json_str);
 
     if (!isValid) return;
 
     switch (packet.type) {
       case PacketType.OFFER:
-        handleIncomingOffer(packet.data as unknown as RTCSessionDescriptionInit, sender_uuid)
+        handleIncomingOffer(
+          packet.data as unknown as RTCSessionDescriptionInit,
+          sender_uuid
+        );
         break;
       case PacketType.ANSWER:
-        handleIncomingAnswer(packet.data as unknown as RTCSessionDescriptionInit)
+        handleIncomingAnswer(
+          packet.data as unknown as RTCSessionDescriptionInit
+        );
         break;
       case PacketType.ICE_CANDIDATE:
-        handleIncomingIceCandidate(packet.data as unknown as RTCIceCandidate)
+        handleIncomingIceCandidate(packet.data as unknown as RTCIceCandidate);
         break;
     }
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ssInfo.msg])
+  }, [ssInfo.msg]);
 
-  const sendMsg = useCallback((msg: string) => {
-    if (dataChannel.current && dataChannel.current.readyState) {
-      dataChannel.current.send(msg)
-    }
-  }, [dataChannel.current])
+  const sendMsg = useCallback(
+    (msg: string) => {
+      if (dataChannel.current && dataChannel.current.readyState) {
+        dataChannel.current.send(msg);
+      }
+    },
+    [dataChannel.current]
+  );
 
   return {
     channelMsg,
     createOffer,
     sendMsg,
     rtcReady,
-  }
+  };
 }
