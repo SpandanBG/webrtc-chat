@@ -49,6 +49,10 @@ interface PeersManager {
   peerContexts: Record<string, PeerContext>;
   sendIceToFreshPeer: (iceCandiates: RTCIceCandidate) => void;
 }
+function hasUserMedia() {
+  //check if the browser supports the WebRTC
+  return !!navigator.mediaDevices.getUserMedia;
+}
 
 function useManagedPeers(ssInfo: SSInfo): PeersManager {
   const [peerCtx, setPeerCtx] = useState<Record<string, PeerContext>>({});
@@ -83,6 +87,10 @@ interface RTCInfo {
   createOffer: (uuid: string) => void;
   sendMsg: (msg: string) => void;
   rtcReady: boolean;
+  sendVideoFeed: () => void;
+  stopVideoFeed: () => void;
+  sendAudioFeed: () => void;
+  stopAudioFeed: () => void;
 }
 
 export function useRTC(ssInfo: SSInfo): RTCInfo {
@@ -102,6 +110,7 @@ export function useRTC(ssInfo: SSInfo): RTCInfo {
 
   // Prepare data channel and send ice candidate
   useEffect(() => {
+    console.log("peer current", peerConn.current);
     dataChannel.current = peerConn.current.createDataChannel(
       dataChannelName,
       dataChannelOptions
@@ -117,8 +126,40 @@ export function useRTC(ssInfo: SSInfo): RTCInfo {
 
     peerConn.current.ondatachannel = (event) => {
       const dataChannel = event.channel;
-
+      console.log("data channel changed", event);
       dataChannel.onmessage = ({ data }) => setChannelMsg(data);
+    };
+
+    // Used to renegotiate the connection to ensure that the remote peer receives the new track.
+    peerConn.current.onnegotiationneeded = async () => {
+      try {
+        const offer = await peerConn.current.createOffer();
+        await peerConn.current.setLocalDescription(offer);
+        const data = offerPacket(offer, ssInfo.uuid);
+        ssInfo.publish(data);
+      } catch (error) {
+        console.error("Error during negotiation", error);
+      }
+    };
+
+    peerConn.current.ontrack = (event) => {
+      if (event.track.kind === "video") {
+        const remoteVideo = document.getElementById(
+          "remoteVideo"
+        ) as HTMLVideoElement;
+        if (remoteVideo) {
+          remoteVideo.srcObject = event.streams[0];
+          remoteVideo.play();
+        }
+      } else if (event.track.kind === "audio") {
+        const remoteAudio = document.getElementById(
+          "remoteAudio"
+        ) as HTMLAudioElement;
+        if (remoteAudio) {
+          remoteAudio.srcObject = event.streams[0];
+          remoteAudio.play();
+        }
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [peerConn.current]);
@@ -194,17 +235,132 @@ export function useRTC(ssInfo: SSInfo): RTCInfo {
 
   const sendMsg = useCallback(
     (msg: string) => {
-      if (dataChannel.current && dataChannel.current.readyState) {
+      if (dataChannel.current && dataChannel.current.readyState == "open") {
         dataChannel.current.send(msg);
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [dataChannel.current]
   );
+
+  const sendVideoFeed = useCallback(() => {
+    if (hasUserMedia()) {
+      navigator.mediaDevices
+        .getUserMedia({
+          video: {
+            facingMode: "user", // or "environment" for rear camera
+          },
+        })
+        .then((stream) => {
+          const video = document.getElementById(
+            "localVideo"
+          ) as HTMLVideoElement;
+          if (video) {
+            video.srcObject = stream;
+            video.play();
+          }
+          stream.getTracks().forEach((track) => {
+            console.log("show tracks", track);
+            try {
+              peerConn.current.addTrack(track, stream);
+            } catch {
+              console.log("error adding track");
+            }
+            debugger;
+          });
+        })
+        .catch((error) => {
+          console.error("Error accessing media devices.", error);
+        });
+    } else {
+      console.error("User media not available");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [peerConn.current]);
+
+  const stopVideoFeed = useCallback(() => {
+    const video = document.getElementById("localVideo") as HTMLVideoElement;
+    if (video && video.srcObject) {
+      const stream = video.srcObject as MediaStream;
+      const tracks = stream.getTracks();
+
+      tracks.forEach((track) => {
+        track.stop();
+      });
+
+      const senders = peerConn.current.getSenders();
+      senders.forEach((sender) => {
+        peerConn.current.removeTrack(sender);
+      });
+
+      video.srcObject = null;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [peerConn.current]);
+
+  const sendAudioFeed = useCallback(() => {
+    if (hasUserMedia()) {
+      navigator.mediaDevices
+        .getUserMedia({
+          audio: true,
+        })
+        .then((stream) => {
+          const audio = document.getElementById(
+            "audioContainer"
+          ) as HTMLAudioElement;
+          audio.srcObject = stream;
+          audio.play();
+          stream.getTracks().forEach((track) => {
+            console.log("show audio tracks", track);
+            try {
+              peerConn.current.addTrack(track, stream);
+            } catch {
+              console.log("error adding audio track");
+            }
+          });
+        })
+        .catch((error) => {
+          console.error("Error accessing audio media devices.", error);
+        });
+    } else {
+      console.error("User media not available for audio");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [peerConn.current]);
+
+  const stopAudioFeed = useCallback(() => {
+    // Assuming there's an audio element to hold the stream
+    const audio = document.getElementById("audioContainer") as HTMLAudioElement;
+
+    if (audio && audio.srcObject) {
+      const stream = audio.srcObject as MediaStream;
+      const tracks = stream.getTracks();
+      console.log("audio track stop");
+      tracks.forEach((track) => {
+        console.log("audio stop track");
+        track.stop();
+      });
+
+      const senders = peerConn.current.getSenders();
+      senders.forEach((sender) => {
+        if (sender.track?.kind === "audio") {
+          peerConn.current.removeTrack(sender);
+        }
+      });
+
+      audio.srcObject = null;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [peerConn.current]);
 
   return {
     channelMsg,
     createOffer,
     sendMsg,
     rtcReady,
+    sendVideoFeed,
+    stopVideoFeed,
+    sendAudioFeed,
+    stopAudioFeed,
   };
 }
