@@ -126,12 +126,12 @@ export function useRTC(ssInfo: SSInfo): RTCInfo {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [peerConn.current])
 
-  const handleIncomingOffer = useCallback((offer: RTCSessionDescriptionInit) => {
+  const handleIncomingOffer = useCallback((offer: RTCSessionDescriptionInit, sender_uuid: string) => {
     peerConn.current.setRemoteDescription(new RTCSessionDescription(offer))
     peerConn.current.createAnswer()
       .then((answer) => {
         const data = answerPacket(answer, ssInfo.uuid)
-        ssInfo.publish(data)
+        ssInfo.send(data, sender_uuid)
 
         peerConn.current.setLocalDescription(answer)
       })
@@ -145,20 +145,21 @@ export function useRTC(ssInfo: SSInfo): RTCInfo {
   }, [peerConn.current])
 
   const handleIncomingIceCandidate = useCallback((iceCandidate: RTCIceCandidate) => {
-    peerConn.current.addIceCandidate(iceCandidate)
+    peerConn.current.addIceCandidate(new RTCIceCandidate(iceCandidate))
     setIceCandidate(iceCandidate);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [peerConn.current])
 
   // Handle messages from signaling server
   useEffect(() => {
-    const [packet, isValid] = unpackPacket(ssInfo.msg)
+    const [sender_uuid, b64_json_str] = ssInfo.msg.split(" ")
+    const [packet, isValid] = unpackPacket(b64_json_str)
 
     if (!isValid) return;
 
     switch (packet.type) {
       case PacketType.OFFER:
-        handleIncomingOffer(packet.data as unknown as RTCSessionDescriptionInit)
+        handleIncomingOffer(packet.data as unknown as RTCSessionDescriptionInit, sender_uuid)
         break;
       case PacketType.ANSWER:
         handleIncomingAnswer(packet.data as unknown as RTCSessionDescriptionInit)

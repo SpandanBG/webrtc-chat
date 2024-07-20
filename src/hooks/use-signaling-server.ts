@@ -45,8 +45,8 @@ export function useSignlingServer(): SSInfo {
         uuid.current = data
       }
 
-      if (`${data}`.endsWith(" Joined")) {
-        const [peerUUID] = `${data}`.split(" ")
+      if (`${data}`.startsWith("joined ")) {
+        const [_, peerUUID] = `${data}`.split(" ")
         addPeer((prevPeer: string[]) => {
           prevPeer.push(peerUUID)
           return prevPeer

@@ -18,7 +18,7 @@ export function offerPacket(offer: RTCSessionDescriptionInit, uuid: string): str
     data: offer
   }
 
-  return JSON.stringify(pkt)
+  return btoa(JSON.stringify(pkt)) 
 }
 
 export function answerPacket(answer: RTCSessionDescriptionInit, uuid: string): string {
@@ -28,7 +28,7 @@ export function answerPacket(answer: RTCSessionDescriptionInit, uuid: string): s
     data: answer
   }
 
-  return JSON.stringify(pkt)
+  return btoa(JSON.stringify(pkt))
 }
 
 export function iceCandidatePacket(candidate: RTCIceCandidate, uuid: string): string {
@@ -38,13 +38,14 @@ export function iceCandidatePacket(candidate: RTCIceCandidate, uuid: string): st
     data: candidate
   }
 
-  return JSON.stringify(pkt)
+  return btoa(JSON.stringify(pkt))
 }
 
-export function unpackPacket(packetStr: string): [Packet, boolean] {
+export function unpackPacket(packetStr_b64: string): [Packet, boolean] {
   try {
+    const packetStr = atob(packetStr_b64)
     return [JSON.parse(packetStr) as unknown as Packet, true];
   } catch {
-    return [{ type: PacketType.NONE, sender_uuid: "", data: packetStr }, false];
+    return [{ type: PacketType.NONE, sender_uuid: "", data: packetStr_b64 }, false];
   }
 }
